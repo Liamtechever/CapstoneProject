@@ -4,3 +4,5 @@ numpy
 ffmpeg-python
 soundfile
 ollama
+openai
+dotenv
