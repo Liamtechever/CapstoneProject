@@ -58,6 +58,11 @@ class Model(ABC):
     def cost(self) -> int:
         pass
 
+    @property
+    @abstractmethod
+    def vision_model(self) -> bool:
+        pass
+
     @abstractmethod
     def chat(self, prompt: str, system_message: str = ""):
         pass
@@ -159,50 +164,131 @@ class OnlineModel(Model):
 
 deepseek_r1_671b = LocalModel(
     name="deepseek-r1:671b",
-    vram=404,
-    strengths=[Strengths("NLP", 9), Strengths("Coding", 9)],
-    response_speed=8,
-    cost=50
+    vram=48,  # Requires high VRAM due to large model size
+    strengths=[
+        Strengths("NLP", 9),
+        Strengths("Coding", 9),
+        Strengths("Math", 9),
+        Strengths("Science", 8),
+        Strengths("Technology", 9),
+        Strengths("Engineering", 8),
+        Strengths("Business_and_Economics", 7),
+        Strengths("History", 7),
+        Strengths("Literature", 6),
+        Strengths("Philosophy", 7),
+        Strengths("Other", 7)
+    ],
+    response_speed=10,
+    cost=0  # Local model, no API cost
 )
 
-# Example instantiation with sample data
 deepseek_r1_8b = LocalModel(
     name="deepseek-r1:8b",
-    vram=5,
-    strengths=[Strengths("NLP", 9), Strengths("Coding", 9)],
-    response_speed=4,
-    cost=50
+    vram=16,  # Requires a moderate amount of VRAM
+    strengths=[
+        Strengths("NLP", 9),
+        Strengths("Coding", 8),
+        Strengths("Math", 8),
+        Strengths("Science", 7),
+        Strengths("Technology", 8),
+        Strengths("Engineering", 7),
+        Strengths("Business_and_Economics", 6),
+        Strengths("History", 6),
+        Strengths("Literature", 5),
+        Strengths("Philosophy", 6),
+        Strengths("Other", 6)
+    ],
+    response_speed=7,
+    cost=0  # Local model, no API cost
 )
-
 
 deepseek_r1_1_5 = LocalModel(
     name="deepseek-r1:1.5b",
-    vram=2,
-    strengths=[Strengths("NLP", 9), Strengths("Reasoning", 8)],
-    response_speed=2,
-    cost=50
+    vram=4,  # Lower VRAM requirement for a small model
+    strengths=[
+        Strengths("NLP", 9),
+        Strengths("Reasoning", 8),
+        Strengths("Math", 7),
+        Strengths("Science", 6),
+        Strengths("Technology", 7),
+        Strengths("Engineering", 6),
+        Strengths("Business_and_Economics", 6),
+        Strengths("History", 6),
+        Strengths("Literature", 6),
+        Strengths("Philosophy", 8),
+        Strengths("Other", 6)
+    ],
+    response_speed=5,
+    cost=0  # Local model, no API cost
 )
-
 
 tinyllama = LocalModel(
     name="tinyllama",
-    vram=1,
-    strengths=[],
-    response_speed=2,
-    cost=0
+    vram=2,  # Very lightweight, runs on minimal VRAM
+    strengths=[
+        Strengths("Coding", 9),
+        Strengths("Technology", 7),
+        Strengths("Engineering", 6),
+        Strengths("Other", 5)
+    ],
+    response_speed=3,
+    cost=0  # Local model, no API cost
 )
-
 
 gptturbo = OnlineModel(
     name="gpt-3.5-turbo",
-    vram=1,
-    strengths=[],
+    vram=0,  # Online model, no local VRAM required
+    strengths=[
+        Strengths("Coding", 5),
+        Strengths("Technology", 5),
+        Strengths("Business_and_Economics", 5),
+        Strengths("History", 5),
+        Strengths("Literature", 5),
+        Strengths("Philosophy", 5),
+        Strengths("Other", 6)
+    ],
     response_speed=0,
-    cost=0
+    cost=5  # API cost: $0.50 per 1M tokens x 10
 )
 
+o3mini = OnlineModel(
+    name="o3-mini",
+    vram=0,  # Online model, no local VRAM required
+    strengths=[
+        Strengths("Coding", 5),
+        Strengths("Technology", 5),
+        Strengths("Business_and_Economics", 5),
+        Strengths("History", 5),
+        Strengths("Literature", 5),
+        Strengths("Philosophy", 5),
+        Strengths("Other", 6)
+    ],
+    response_speed=0,
+    cost=3  # API cost: $0.30 per 1M tokens x 10
+)
 
-_available_models = [deepseek_r1_671b, deepseek_r1_8b, deepseek_r1_1_5, tinyllama, gptturbo]
+llama3_2_vision = LocalModel(
+    name="llama3.2-vision",
+    vram=24,  # Estimated VRAM requirement for multimodal processing
+    strengths=[
+        Strengths("NLP", 9),
+        Strengths("Coding", 7),
+        Strengths("Math", 8),
+        Strengths("Science", 7),
+        Strengths("Technology", 8),
+        Strengths("Engineering", 7),
+        Strengths("Business_and_Economics", 6),
+        Strengths("History", 6),
+        Strengths("Literature", 7),
+        Strengths("Philosophy", 7),
+        Strengths("Other", 6),
+        Strengths("Vision", 9)  # Strong image processing and visual reasoning
+    ],
+    response_speed=6,  # Faster than large text models but slower than API models
+    cost=0  # Local model, no API cost
+)
+
+_available_models = [deepseek_r1_671b, deepseek_r1_8b, deepseek_r1_1_5, tinyllama, gptturbo, o3mini]
 
 # TODO: Move to settings file
 
