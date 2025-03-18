@@ -15,9 +15,6 @@ class Classification:
     requires_vision: bool
 
 
-
-
-
 def classify_prompt(prompt: str):
     system_message = (
              "You are an AI assistant that classifies prompts into three categories with high accuracy:\n\n"
@@ -40,13 +37,14 @@ def classify_prompt(prompt: str):
         "   - True: If answering requires logical reasoning, synthesis of information, or analytical thinking.\n"
         "   - False: If the answer is straightforward, fact-based, or requires minimal thought.\n\n"
          "4. **Requires Vision**: Determine whether the prompt requires analyzing an image, diagram, or visual content.\n"
-        "   - True: If answering requires interpreting visual data, charts, diagrams, images or explicitly STATED by USER that Vision is wanted.\n"
+        "   - True: If answering requires interpreting visual data, charts, diagrams, images, or EXPLICITLY STATED by USER (e.g., 'Can you take a look at this?').\n"
         "   - False: If the answer is purely text-based and does not rely on visual input.\n\n"
 
         "### **Formatting Instructions:**\n"
         "Output the classification as JSON with keys: `subject`, `difficulty`,`requires_thinking`, and `requires_vision`.\n"
         "Make SURE to include all keys. ONLY use the subjects listed above."
         "YOU MUST STICK TO THE FORMAT OF THE EXAMPLE OUTPUT"
+        "MAKE SURE SUBJECT IS INCLUDED IN THE OUTPUT"
         "Example output:\n"
         '{ "subject": "Science", "difficulty": 2, "requires_thinking": true, "requires_vision": false }\n\n"'
         )
@@ -62,8 +60,8 @@ def classify_prompt(prompt: str):
     try:
         c_dict = json.loads(json_string)
         classification = Classification(c_dict["subject"], c_dict["difficulty"], c_dict["requires_thinking"], c_dict["requires_vision"])
-    except json.JSONDecodeError:
-        classification = Classification("None", 0, False)
+    except (json.JSONDecodeError, KeyError) as e:
+        classification = Classification("None", 0, False, False)
         print("Error: Could not parse JSON.")
 
     print(response)
@@ -73,8 +71,8 @@ def classify_prompt(prompt: str):
 
 if __name__ == '__main__':
     record_audio()
-    _prompt = transcribe_audio("output.mp3")
-
+    #_prompt = transcribe_audio("output.mp3")
+    _prompt = transcribe_audio("tmp/response.wav")
     print(f"Prompt: {_prompt}")
 
     print(classify_prompt(prompt=_prompt))
