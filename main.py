@@ -1,6 +1,3 @@
-import re
-import json
-from dataclasses import dataclass
 
 from Model import Model, LocalModel, _available_models, OnlineModel
 from Settings import format_settings_for_modelpicker, load_settings
@@ -18,7 +15,7 @@ if __name__ == '__main__':
     play_tts("How can I help you today?", speaker="p251", speed=1, pitch=0)
 
     record_audio()
-    _prompt = transcribe_audio("response.wav")
+    _prompt = transcribe_audio("tmp/response.wav")
     print(f"Prompt: {_prompt}")
 
     # Classify the prompt
