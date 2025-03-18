@@ -1,10 +1,19 @@
 import json
 import os
-import psutil
-import GPUtil  # Install with: pip install gputil
 import re
 
+import psutil
+import GPUtil
+import whisper
+from word2number import w2n
+
+from TextToSpeech import play_tts
+from AudioRecording import record_audio
+from SpeechToText import transcribe_audio
+
+
 SETTINGS_FILE = "settings.json"
+whisper_model = whisper.load_model("small")  # Preload the Whisper model
 
 class Settings:
     def __init__(self, user_vram=None, use_internet=None, api_cost_tolerance=None):
@@ -21,6 +30,7 @@ def detect_system_vram():
     try:
         gpus = GPUtil.getGPUs()
         if gpus:
+            # TODO: Rounding weirdness. Maybe a more accurate way to handle this
             vram_gb = int(gpus[0].memoryTotal / 1024)  # Convert MB to GB
             print(f"Detected GPU VRAM: {vram_gb}GB")
             return vram_gb
@@ -31,25 +41,56 @@ def detect_system_vram():
         print(f"Error detecting VRAM: {e}. Using default 4GB.")
         return 4  # Default to 4GB if detection fails
 
+def normalize_response(text):
+    """Normalize transcription output by removing punctuation and converting words to numbers."""
+    text = text.strip().lower()  # Convert to lowercase and remove leading/trailing spaces
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation (keep letters and numbers)
+
+    # Convert word numbers to digits if applicable
+    try:
+        text = str(w2n.word_to_num(text))  # Convert word numbers ("two") to numerical format ("2")
+    except ValueError:
+        pass  # If conversion fails, assume it's not a number and return the text as-is
+
+    return text
+
 def ask_yes_no(question):
     """Asks a Yes/No question and returns True for 'Yes' and False for 'No'."""
     while True:
-        response = input(question).strip().lower()
-        if response in ["yes", "no"]:
-            return response == "yes"
-        print("Please enter 'Yes' or 'No'.")
+        play_tts(question, speaker="p251", speed=1, pitch=0)  # Ask via TTS
+        temp_filename = "tmp/temp_response.wav"
+        record_audio(temp_filename)  # Now stops recording automatically
+        response_text = transcribe_audio(temp_filename)
+
+        print(f"Raw Transcribed Response: {response_text}")
+        response_text = normalize_response(response_text)
+
+        if response_text == "yes":
+            return True
+        elif response_text == "no":
+            return False
+        else:
+            play_tts("Please say yes or no.", speaker="p251", speed=1, pitch=0)
 
 def ask_number(question, min_val, max_val):
     """Asks for a number within a range and ensures valid input."""
     while True:
+        play_tts(question, speaker="p251", speed=1, pitch=0)
+        temp_filename = "tmp/temp_response.wav"
+        record_audio(temp_filename)  # Now stops recording automatically
+        response_text = transcribe_audio(temp_filename)
+
+        print(f"Raw Transcribed Response: {response_text}")
+        response_text = normalize_response(response_text)
+
         try:
-            value = int(input(question).strip())
-            if min_val <= max_val:
-                return max(min(value, max_val), min_val)  # Ensures value is in range
+            value = int(response_text)
+            if min_val <= value <= max_val:
+                return value
             else:
-                print(f"Please enter a number between {min_val} and {max_val}.")
+                play_tts(f"Please enter a number between {min_val} and {max_val}.", speaker="p251", speed=1, pitch=0)
         except ValueError:
-            print("Please enter a valid integer.")
+            play_tts("Please say a valid number.", speaker="p251", speed=1, pitch=0)
 
 def load_settings():
     """Loads settings.json using regex, ensures correct data types, and returns a Settings object."""
@@ -59,7 +100,7 @@ def load_settings():
                 content = file.read()  # Read the full file contents
 
             # Regex to match JSON (non-greedy match to prevent over-extraction)
-            match = re.search(r"\{[\s\S]*?\}", content)
+            match = re.search(r"\{[\s\S]*?}", content)
 
             if match:
                 json_string = match.group(0)  # Extract the JSON portion
@@ -89,9 +130,17 @@ def load_settings():
 
 def ask_user_for_settings():
     """Asks user for settings and saves them to a file."""
+    # First question (use a valid string to pass to the TTS function)
+    question = "Would you like to use internet-based models? (Yes/No): "
+    use_internet = ask_yes_no(question)  # Pass the actual question
+
+    # Second question
+    question = "On a scale from 0 to 10, how much are you willing to spend on API costs? (0 = none, 10 = highest cost): "
+    api_cost_tolerance = ask_number(question, 0, 10)  # Pass the actual question
+
     settings = Settings(
-        use_internet=ask_yes_no("Would you like to use internet-based models? (Yes/No): "),
-        api_cost_tolerance=ask_number("On a scale from 0-10, how much are you willing to spend on API costs? (0 = none, 10 = highest cost): ", 0, 10)
+        use_internet=use_internet,
+        api_cost_tolerance=api_cost_tolerance
     )
     save_settings(settings)
     return settings
@@ -103,15 +152,19 @@ def save_settings(settings):
             "use_internet": settings.use_internet,
             "user_vram": settings.user_vram,
             "api_cost_tolerance": settings.api_cost_tolerance
-        }, file, indent=4)
+        }, file, indent=4)  # TODO: Fix warning
     print(f"\n Settings saved to {SETTINGS_FILE}")
+    play_tts("Awesome, I have saved your settings", speaker="p251", speed=1, pitch=0)
 
-def format_settings_for_modelpicker():
+def format_settings_for_model_picker():
     """Formats settings into a ModelPicker-compatible string."""
     settings = load_settings()
     settings_string = f"user_settings = Settings(user_vram={settings.user_vram}, use_internet={settings.use_internet}, api_cost_tolerance={settings.api_cost_tolerance})"
     print(settings_string)
+
+    play_tts("Hold on for one second, .. I am loading your settings", speaker="p251", speed=1, pitch=0)
+
     return settings_string  # Can be written to a file if needed
 
 if __name__ == "__main__":
-    format_settings_for_modelpicker()
+    format_settings_for_model_picker()

@@ -1,6 +1,6 @@
 
 from Model import Model, LocalModel, _available_models, OnlineModel
-from Settings import format_settings_for_modelpicker, load_settings
+from Settings import format_settings_for_model_picker, load_settings
 from SpeechToText import transcribe_audio
 from AudioRecording import record_audio
 from Classifier import classify_prompt
@@ -10,7 +10,7 @@ from Classifier import Classification
 
 if __name__ == '__main__':
     # Initialize settings if it doesn't exist
-    format_settings_for_modelpicker()
+    format_settings_for_model_picker()
 
     play_tts("How can I help you today?", speaker="p251", speed=1, pitch=0)
 
