@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from Classifier import Classification
 from AudioRecording import record_audio
 from SpeechToText import transcribe_audio
-
+from Vision import UseVision
 if __name__ == '__main__':
     # Initialize settings if it doesn't exist
     format_settings_for_model_picker()
@@ -36,56 +36,9 @@ if __name__ == '__main__':
     print("Using this classification: ", prompt_classification)
 
     if prompt_classification.requires_vision:
-        # Function to encode the image
-        capture_image()
+       UseVision(_prompt, prompt_classification)
 
 
-        # Now you can proceed with the OpenAI API client initialization
-        client = openai.OpenAI()
-        print(client)
-
-
-        load_dotenv("secrets.env")
-
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-
-
-
-
-        def encode_image(image_path):
-            """Encodes an image to base64 format."""
-            with open(image_path, "rb") as image_file:
-                return base64.b64encode(image_file.read()).decode("utf-8")
-
-
-        # Prepare the image
-        image_path = 'C:/Users/liamt/PycharmProjects/CapstoneProject/captured_image.jpg'
-        base64_image = encode_image(image_path)
-
-        # Call the vision model
-        response = client.chat.completions.create(
-            model="gpt-4o",  # Ensure this matches your vision model
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": _prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            }
-                        }
-                    ],
-                }
-            ],
-            max_tokens=300
-        )
-
-        print(response.choices[0].message.content)
-
-
-        vision_model = pick_model(available_models=_available_models, prompt_classification=prompt_classification)[0]
 
 
 
