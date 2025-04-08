@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from AudioRecording import record_audio
 from Model import deepseek_r1_1_5, gptturbo
 from SpeechToText import transcribe_audio
+from Model import Model, LocalModel, _available_models, OnlineModel
+from Settings import load_settings
+
+# Load settings from settings.json
+user_settings = load_settings()
 
 
 @dataclass
@@ -49,7 +54,14 @@ def classify_prompt(prompt: str):
         '{ "subject": "Science", "difficulty": 2, "requires_thinking": true, "requires_vision": false }\n\n"'
         )
 
-    response = deepseek_r1_1_5.chat(prompt=f"Classify this prompt: {prompt}", system_message=system_message)
+    if not user_settings.use_internet:
+        response = deepseek_r1_1_5.chat(prompt=f"Classify this prompt: {prompt}", system_message=system_message)
+
+    elif user_settings.use_internet:
+        response = gptturbo.chat(prompt=f"Classify this prompt: {prompt}", system_message=system_message)
+        print("using online classifier")
+
+
     #response = gptturbo.chat(prompt=f"Classify this prompt: {prompt}", system_message=system_message)
 
     match = re.search(r"{[\s\S]*?}", response)
@@ -61,7 +73,7 @@ def classify_prompt(prompt: str):
         c_dict = json.loads(json_string)
         classification = Classification(c_dict["subject"], c_dict["difficulty"], c_dict["requires_thinking"], c_dict["requires_vision"])
     except (json.JSONDecodeError, KeyError) as e:
-        classification = Classification("None", 0, False, False)
+        classification = Classification("Other", 0, False, False)
         print("Error: Could not parse JSON.")
 
     print(response)

@@ -16,3 +16,4 @@ psutil~=7.0.0
 GPUtil~=1.4.0
 word2number
 pydub
+opencv-python

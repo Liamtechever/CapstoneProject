@@ -15,7 +15,7 @@ from SpeechToText import transcribe_audio
 
 load_dotenv("secrets.env")
 
-openai.api_key = os.getenv("OPEN_API_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 if openai.api_key is None:
     raise ValueError("API key not found. Check your secrets.env file.")
@@ -61,10 +61,10 @@ class Model(ABC):
     @property
     @abstractmethod
     def vision_model(self) -> bool:
-        pass
+       pass
 
     @abstractmethod
-    def chat(self, prompt: str, system_message: str = ""):
+    def chat(self, prompt: str, system_message: str = "", image: str = None):
         pass
 
     def __str__(self):
@@ -79,12 +79,13 @@ text = str(num)
 
 
 class LocalModel(Model):
-    def __init__(self, name: str, vram: int, strengths: List[Strengths], response_speed: int, cost: int):
+    def __init__(self, name: str, vram: int, strengths: List[Strengths], response_speed: int, cost: int, vision_model: bool = False):
         super().__init__(name)
         self._vram = vram
         self._strengths = strengths
         self._speed = response_speed
         self._cost = cost
+        self._vision_model = vision_model
 
     @property
     def vram(self) -> int:
@@ -99,17 +100,39 @@ class LocalModel(Model):
         pass
 
     @property
+    def vision_model(self) -> bool:
+       return self._vision_model
+
+    @property
     def cost(self) -> int:
         return self._cost
 
-    def chat(self, prompt: str, system_message: str = ""):
-        response: ChatResponse = chat(
-            model=self.name,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"{prompt}"},
-            ]
-        )
+    def chat(self, prompt: str, system_message: str = "", image: str = None):
+
+        if image:
+            response: ChatResponse = chat(
+                model=self.name,
+                messages=[
+                    # {
+                    #     "role": "system",
+                    #     "content": system_message
+                    # },
+                    {
+                        "role": "user",
+                        "content": prompt,
+                        "images": [image]
+                    }
+                ]
+            )
+
+        else:
+            response: ChatResponse = chat(
+                model=self.name,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": f"{prompt}"},
+                ]
+            )
 
 
         response_text = response.message.content.strip()
@@ -118,12 +141,13 @@ class LocalModel(Model):
 
 
 class OnlineModel(Model):
-    def __init__(self, name: str, vram: int, strengths: List[Strengths], response_speed: int, cost: int):
+    def __init__(self, name: str, vram: int, strengths: List[Strengths], response_speed: int, cost: int, vision_model: bool = False):
         super().__init__(name)
         self._vram = vram
         self._strengths = strengths
         self._response_speed = speed
         self._cost = cost
+        self._vision_model = vision_model
 
     @property
     def vram(self) -> int:
@@ -141,22 +165,37 @@ class OnlineModel(Model):
     def cost(self) -> int:
         return self._cost
 
-    def chat(self, prompt: str, system_message: str = ""):
+    @property
+    def vision_model(self) -> bool:
+       return self._vision_model
+
+    def chat(self, prompt: str, system_message: str = "", image: str = None):
         # Insert OpenAPI library calls here
 
+        if image:
+            response = openai.chat.completions.create(
+                model=self.name,  # GPT-4 Vision model
+                messages=[
+                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": [image]}
+                ]
+            )
 
-        response = openai.chat.completions.create(
-            model=self.name,  # Or "gpt-3.5-turbo" if GPT-4 is unavailable
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"{prompt}"},
-            ],
-            max_tokens=50,
-            temperature=0.7,
-        )
+
+        else:
+            response = openai.chat.completions.create(
+                model=self.name,  # Or "gpt-3.5-turbo" if GPT-4 is unavailable
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": f"{prompt}"},
+                ],
+                # max_completion_tokens=500,
+
+            )
+
 
         response_text = response.choices[0].message.content.strip()
-
+        print(response.__dict__)
 
         return response_text
 
@@ -285,10 +324,34 @@ llama3_2_vision = LocalModel(
         Strengths("Vision", 9)  # Strong image processing and visual reasoning
     ],
     response_speed=6,  # Faster than large text models but slower than API models
-    cost=0  # Local model, no API cost
+    cost=0,  # Local model, no API cost
+    vision_model=True
 )
 
-_available_models = [deepseek_r1_671b, deepseek_r1_8b, deepseek_r1_1_5, tinyllama, gptturbo, o3mini]
+gpt4_vision = OnlineModel(
+    name="gpt-4-turbo",
+    vram=0,  # No VRAM needed for API calls
+    strengths=[
+        Strengths("NLP", 10),  # GPT-4 excels at Natural Language Processing
+        Strengths("Coding", 8),  # GPT-4 is quite strong at coding tasks
+        Strengths("Math", 9),  # GPT-4 is also very capable with math-related tasks
+        Strengths("Science", 9),  # Strong in scientific understanding and research
+        Strengths("Technology", 9),  # Strong in technology discussions
+        Strengths("Engineering", 8),  # Solid knowledge in engineering fields
+        Strengths("Business_and_Economics", 8),  # Good at analyzing business-related queries
+        Strengths("History", 7),  # Good, but slightly less specialized in history
+        Strengths("Literature", 8),  # Good for understanding literature and literary analysis
+        Strengths("Philosophy", 8),  # Strong in philosophical discussions and critical thinking
+        Strengths("Other", 7),  # Strong in various other topics
+        Strengths("Vision", 10)  # GPT-4 Vision excels at image processing and visual reasoning
+    ],
+    response_speed=7,  # API models like GPT-4 Vision are generally fast but may still take longer due to the added complexity of vision tasks
+    cost=300,  # Cost per 1,000,000 tokens for the 8K model (in USD) x 10
+    vision_model=True  # Marking it as a vision model
+)
+
+
+_available_models = [deepseek_r1_671b, deepseek_r1_8b, deepseek_r1_1_5, tinyllama, gptturbo, o3mini, llama3_2_vision, gpt4_vision]
 
 # TODO: Move to settings file
 
@@ -297,13 +360,12 @@ _available_models = [deepseek_r1_671b, deepseek_r1_8b, deepseek_r1_1_5, tinyllam
 if __name__ == '__main__':
 
     record_audio()
-    prompt=transcribe_audio("output.mp3")
-
-    print(f"Prompt: {prompt}")
-
-    #print(deepseek_r1_1_5.chat(prompt))
-
-    print(gptturbo.chat(prompt))
+    #
+    # print(f"Prompt: {prompt}")
+    #
+    # #print(deepseek_r1_1_5.chat(prompt))
+    #
+    # print(gptturbo.chat(prompt))
 
 
 

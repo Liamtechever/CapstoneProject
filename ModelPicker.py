@@ -16,6 +16,15 @@ print(f"Using settings: user_vram={user_settings.user_vram}, use_internet={user_
 def pick_model(available_models: list[Model], prompt_classification: Classification, max_number_of_models: int = 2):
     print(available_models)
 
+    if prompt_classification.requires_vision:
+        for model in available_models:
+            if model.vision_model:
+                print(model)
+                return [model]
+
+        else:
+            print("No vision models supported...")
+
     vram_filtered_models = []
     for model in available_models:
         if model.vram <= user_settings.user_vram:
@@ -55,20 +64,20 @@ def pick_model(available_models: list[Model], prompt_classification: Classificat
 
     print(subject_filtered_models)
 
+    models_to_sort = subject_filtered_models if subject_filtered_models else internet_filtered_models
 
-
-    # Sort subject filtered models by strength
+    # Sort models by subject strength (or default 0 if not found)
     sorted_subject_strength_models = sorted(
-        subject_filtered_models,
+        models_to_sort,
         key=lambda model: next(
             (strength.strength_level for strength in model.strengths if
              strength.subject_strength == prompt_classification.subject),
             0  # Default to 0 if the subject is not found
         ),
-        reverse=True  # Sort from highest to lowest
+        reverse=True
     )
 
-    print(sorted_subject_strength_models)
+    print("Sorted models:", sorted_subject_strength_models)
 
     # TODO: Default model if none match
 
@@ -94,6 +103,6 @@ if __name__ == '__main__':
 
 
     #user_settings = Settings(user_vram=500, use_internet=False)
-    best_models = pick_model(available_models=_available_models, prompt_classification=Classification("Technology", 3, True))
+    best_models = pick_model(available_models=_available_models, prompt_classification=Classification("Technology", 3, True, True))
     #best_models.chat()
     print(best_models)
