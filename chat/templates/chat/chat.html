@@ -1,117 +1,52 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Chat Interface</title>
-    <style>
-        body {
-            background-color: #2c2f33;
-            color: #f0f0f0;
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            color: #ffffff;
-        }
-
-        form {
-            margin-bottom: 20px;
-        }
-
-        input[type="text"] {
-            width: 70%;
-            padding: 10px;
-            background-color: #40444b;
-            border: none;
-            border-radius: 6px;
-            color: #fff;
-            margin-right: 10px;
-        }
-
-        button {
-            padding: 10px 16px;
-            background-color: #7289da;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #5b6eae;
-        }
-
-        #chat-box {
-            background-color: #36393f;
-            padding: 15px;
-            border-radius: 8px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .message {
-            display: flex;
-            margin-bottom: 10px;
-        }
-
-        .user-message {
-            justify-content: flex-end;
-        }
-
-        .bot-message {
-            justify-content: flex-start;
-        }
-
-        .bubble {
-            max-width: 70%;
-            padding: 10px 15px;
-            border-radius: 12px;
-            background-color: #5865f2;
-            color: #fff;
-        }
-
-        .bot-message .bubble {
-            background-color: #4f545c;
-            color: #f0f0f0;
-        }
-
-        form[action*="logout"] {
-            margin-top: 30px;
-        }
-    </style>
-</head>
-<body>
-<h1>Chat Interface</h1>
-
-<form method="post">
-    {% csrf_token %}
-    <input type="text" name="message" placeholder="Type your message..." required>
-    <button type="submit">Send</button>
-</form>
-
-<div id="chat-box">
-    {% for message in messages %}
-        <div class="message {% if message.user %}user-message{% else %}bot-message{% endif %}">
-            <div class="bubble">
-                {{ message.text }}
-                {% if not message.user and message.model %}
-                    <div style="margin-top: 5px; font-size: 0.8em; color: #a0a0a0;">
-                        — {{ message.model }}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    {% empty %}
-        <p>No messages yet. Start the conversation!</p>
-    {% endfor %}
+{% extends 'chat/base.html' %}
+{% block title %}Chat · Capstone Assistant{% endblock %}
+{% block content %}
+<section class="intro">
+  <p class="eyebrow">TEXT WORKSPACE</p>
+  <h1>A question. A considered response.</h1>
+  <p>Explore answers from models selected using your configured preferences.</p>
+</section>
+<div class="workspace">
+  <section class="conversation" aria-labelledby="conversation-title">
+    <div class="section-heading">
+      <h2 id="conversation-title">Conversation</h2>
+      <form method="post">
+        {% csrf_token %}
+        <button class="quiet" name="action" value="clear" type="submit">Clear history</button>
+      </form>
+    </div>
+    <div id="chat-box" role="log" aria-live="polite" aria-label="Chat messages">
+      {% for message in history %}
+      <article class="message {% if message.user %}user-message{% else %}assistant-message{% endif %}">
+        <p class="message-author">{% if message.user %}You{% else %}Assistant <span class="model">{{ message.model }}</span>{% endif %}</p>
+        <div class="message-text">{{ message.text|linebreaksbr }}</div>
+      </article>
+      {% empty %}
+      <div class="empty-state">
+        <span class="empty-symbol" aria-hidden="true">↗</span>
+        <h3>Start with something you're curious about.</h3>
+        <p>Ask a text question below. Each request is answered independently.</p>
+      </div>
+      {% endfor %}
+    </div>
+    <form method="post" class="composer" data-chat-form>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      {{ form.message.label_tag }}
+      {{ form.message }}
+      {% if form.message.errors %}<div class="error" role="alert">{{ form.message.errors }}</div>{% endif %}
+      <div class="composer-footer">
+        <p id="message-help">Up to 4,000 characters. Text only.</p>
+        <button type="submit" data-send-button>Send message <span aria-hidden="true">↗</span></button>
+      </div>
+      <p class="status" role="status" data-status hidden>Preparing your response. This may take a moment…</p>
+    </form>
+  </section>
+  <aside class="session-note">
+    <h2>Your session</h2>
+    <p>The last ten exchanges are shown here. Earlier messages are not sent as model context.</p>
+    <p>When hosted models are enabled, your question and draft answer may be sent to OpenAI.</p>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="quiet">Sign out</button></form>
+  </aside>
 </div>
-
-
-<form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button type="submit">Logout</button>
-</form>
-</body>
-</html>
+{% endblock %}

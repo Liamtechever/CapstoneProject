@@ -1,18 +1,13 @@
-import whisper
-from AudioRecording import record_audio
+"""Compatibility entry point for cached Whisper transcription."""
 
+from media.speech import transcribe_audio
 
-def transcribe_audio(file_path: str, model: str = "small"):
-    model = whisper.load_model(model)
-    result = model.transcribe(file_path)
+__all__ = ["transcribe_audio"]
+if __name__ == "__main__":
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
 
-    return result["text"]
+    from media.audio import record_audio
 
-
-
-if __name__ == '__main__':
-
-    record_audio()
-    print(transcribe_audio("output.mp3"))
-
-
+    with TemporaryDirectory() as folder:
+        print(transcribe_audio(record_audio(Path(folder) / "response.wav")))
