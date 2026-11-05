@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "chatproj.test_settings"
+python_files = ["test_*.py", "tests.py"]
+testpaths = ["tests", "chat"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [".venv", "var"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

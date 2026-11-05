@@ -1,0 +1,6 @@
+# Text CLI and Django web application. Heavy media packages are optional.
+Django>=5.2.19,<5.3
+openai>=2.54,<3
+ollama>=0.6.3,<1
+python-dotenv>=1.2.4,<2
+tzdata>=2026.1
